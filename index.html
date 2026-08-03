@@ -166,7 +166,7 @@
 
   /* ============ 許願瓶＋可互動星星（開場） ============ */
   .bottle-wrap{ display:flex; flex-direction:column; align-items:center; margin-bottom: 8px; }
-  .bottle-stage{ position:relative; width:180px; height:230px; margin: 0 auto; }
+  .bottle-stage{ position:relative; width:180px; height:230px; margin: 0 auto; overflow:hidden; }
   .bottle-svg{ width:100%; height:100%; display:block; overflow:visible; }
   .bottle-glass{ fill: rgba(74,124,158,0.14); stroke: var(--star-gold-soft); stroke-width:1.5; }
   .bottle-cork{ fill: var(--star-gold-soft); opacity:0.9; }
@@ -182,7 +182,7 @@
   }
 
   .catch-star{
-    position:absolute; left:50%; top:-8px; width:36px; height:36px;
+    position:absolute; left:50%; top:10px; width:36px; height:36px;
     margin-left:-18px; cursor:pointer; z-index:3;
     filter: drop-shadow(0 0 7px var(--star-gold));
     animation: catchTwinkle 2.1s ease-in-out infinite;
@@ -202,7 +202,7 @@
   @keyframes starFall{
     0%{ transform: translateY(0) scale(1); opacity:1; }
     65%{ opacity:1; }
-    100%{ transform: translateY(150px) scale(0.35); opacity:0; }
+    100%{ transform: translateY(70px) scale(0.35); opacity:0; }
   }
 
   .bottle-hint{
@@ -329,16 +329,23 @@
       <div class="bottle-wrap">
         <div class="bottle-stage" id="bottleStage">
           <svg class="bottle-svg" viewBox="0 0 160 230" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <clipPath id="bottleClip">
+                <path d="M70,18 L90,18 L90,55 C112,66 128,92 128,130 C128,178 100,212 80,212 C60,212 32,178 32,130 C32,92 48,66 70,55 Z"/>
+              </clipPath>
+            </defs>
             <path class="bottle-glass" d="M70,18 L90,18 L90,55 C112,66 128,92 128,130 C128,178 100,212 80,212 C60,212 32,178 32,130 C32,92 48,66 70,55 Z"/>
             <rect class="bottle-cork" x="66" y="4" width="28" height="18" rx="4"/>
-            <!-- 原本已收集的五顆星星 -->
-            <g class="bottle-star" transform="translate(58,168) scale(0.8)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
-            <g class="bottle-star" transform="translate(82,182) scale(0.7)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
-            <g class="bottle-star" transform="translate(96,160) scale(0.75)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
-            <g class="bottle-star" transform="translate(66,192) scale(0.6)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
-            <g class="bottle-star" transform="translate(90,198) scale(0.65)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
-            <!-- 第六顆星星：點擊落下後才會出現 -->
-            <g class="bottle-star new-star" id="bottleStarNew" transform="translate(76,175) scale(0.85)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+            <g clip-path="url(#bottleClip)">
+              <!-- 原本已收集的五顆星星 -->
+              <g class="bottle-star" transform="translate(54,156) scale(0.68)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+              <g class="bottle-star" transform="translate(76,170) scale(0.6)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+              <g class="bottle-star" transform="translate(92,148) scale(0.64)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+              <g class="bottle-star" transform="translate(63,182) scale(0.5)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+              <g class="bottle-star" transform="translate(85,189) scale(0.55)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+              <!-- 第六顆星星：點擊落下後才會出現 -->
+              <g class="bottle-star new-star" id="bottleStarNew" transform="translate(72,164) scale(0.74)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+            </g>
           </svg>
           <div class="catch-star" id="catchStar" onclick="catchTheStar()">
             <svg viewBox="0 0 24 24"><path class="pt" d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></svg>
@@ -569,19 +576,32 @@ function playNarrative1(){
 /* ---------------- 場景 2：QR 掃描 ---------------- */
 async function startScanner(){
   const statusEl = document.getElementById('scanStatus');
-  document.getElementById('btn-start-scan').classList.remove('show');
+  const btn = document.getElementById('btn-start-scan');
+  btn.classList.remove('show');
   statusEl.textContent = '正在啟動相機…';
   statusEl.className = 'status-line';
 
   try{
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } },
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
       audio: false
     });
     activeStream = stream;
     const video = document.getElementById('qrVideo');
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.setAttribute('autoplay', 'true');
+    video.setAttribute('muted', 'true');
     video.srcObject = stream;
-    await video.play();
+
+    await video.play().catch(() => {
+      statusEl.textContent = '相機已啟動，請再點一下畫面後繼續掃描';
+    });
+
     statusEl.textContent = '請將 QR Code 對準框內';
     requestAnimationFrame(scanLoop);
   }catch(err){
