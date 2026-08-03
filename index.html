@@ -253,6 +253,18 @@
     animation: scanMove 2.2s ease-in-out infinite;
   }
   @keyframes scanMove{ 0%,100%{ top:14%; } 50%{ top:82%; } }
+  .scan-line.paused{ animation-play-state: paused; opacity:0; }
+
+  .qr-result-wrap{
+    position:absolute; inset: 14%; z-index:5;
+    display:flex; align-items:center; justify-content:center;
+    background: var(--bg-deep);
+    opacity:0; transform: scale(0.92);
+    transition: opacity .5s ease, transform .5s ease;
+    pointer-events:none;
+  }
+  .qr-result-wrap.show{ opacity:1; transform: scale(1); }
+  .qr-result-wrap img{ width:100%; height:100%; object-fit:contain; }
 
   .tap-to-play{
     position:absolute; inset:0; width:100%; height:100%;
@@ -401,15 +413,17 @@
       <div class="scanner-frame" id="scannerFrame">
         <video id="qrVideo" playsinline muted autoplay></video>
         <div class="scan-guide"></div>
-        <div class="scan-line"></div>
+        <div class="scan-line" id="scanLine"></div>
+        <div class="qr-result-wrap" id="qrResultWrap">
+          <img src="qrcode.png" alt="已掃描到的 QR Code">
+        </div>
         <button type="button" id="tapToPlay" class="tap-to-play" style="display:none;">畫面卡住了嗎？<br>點這裡繼續</button>
       </div>
-      <canvas id="qrCanvas" style="display:none;"></canvas>
-
       <p class="status-line" id="scanStatus">請將守城人給的 QR Code 對準框內</p>
 
       <div class="btn-row">
-        <button class="btn" id="btn-start-scan" onclick="startScanner()">開始掃描</button>
+        <button class="btn show" id="btn-start-scan" onclick="startScanner()">開始掃描</button>
+        <button class="btn" id="btn-scan-continue" style="display:none;" onclick="goToScene('scene-answer')">繼續前往下一關</button>
       </div>
     </div>
   </section>
@@ -447,7 +461,6 @@
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
 <script>
 /* =========================================================
    可調整設定：通關答案
@@ -580,14 +593,13 @@ function playNarrative1(){
   });
 }
 
-/* ---------------- 場景 2：QR 掃描 ---------------- */
+/* ---------------- 場景 2：QR 掃描（畫面維持相機掃描樣式，8 秒後模擬掃到 QR） ---------------- */
 async function tryPlayVideo(video, statusEl, tapBtn){
   try{
     await video.play();
     tapBtn.style.display = 'none';
     statusEl.textContent = '請將 QR Code 對準框內';
     statusEl.className = 'status-line';
-    requestAnimationFrame(scanLoop);
   }catch(err){
     // iOS 常常需要「再點一次」畫面才會真的開始播放
     tapBtn.style.display = 'block';
@@ -595,15 +607,23 @@ async function tryPlayVideo(video, statusEl, tapBtn){
   }
 }
 
+let scanMatchTimer = null;
+
 async function startScanner(){
   const statusEl = document.getElementById('scanStatus');
   const btn = document.getElementById('btn-start-scan');
   const video = document.getElementById('qrVideo');
   const tapBtn = document.getElementById('tapToPlay');
   btn.classList.remove('show');
+  btn.style.display = 'none';
   tapBtn.style.display = 'none';
   statusEl.textContent = '正在啟動相機…';
   statusEl.className = 'status-line';
+
+  // 無論相機是否成功啟動，8 秒後都會模擬掃到守城人的 QR Code
+  scanLocked = false;
+  clearTimeout(scanMatchTimer);
+  scanMatchTimer = setTimeout(showQrMatched, 8000);
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     statusEl.textContent = '這個瀏覽器不支援相機掃描，請改用手機內建的 Safari 或 Chrome 打開這個網址（不要用 LINE／IG 內建瀏覽器）';
@@ -652,42 +672,51 @@ async function startScanner(){
 }
 
 function stopScanner(){
+  clearTimeout(scanMatchTimer);
   if(activeStream){
     activeStream.getTracks().forEach(t=>t.stop());
     activeStream = null;
   }
   const tapBtn = document.getElementById('tapToPlay');
   if (tapBtn) tapBtn.style.display = 'none';
+  resetScanScene();
+}
+
+function resetScanScene(){
+  scanLocked = false;
+  const startBtn = document.getElementById('btn-start-scan');
+  const continueBtn = document.getElementById('btn-scan-continue');
+  const resultWrap = document.getElementById('qrResultWrap');
+  const scanLine = document.getElementById('scanLine');
+  const statusEl = document.getElementById('scanStatus');
+  if(startBtn){ startBtn.style.display = 'inline-block'; startBtn.classList.add('show'); }
+  if(continueBtn){ continueBtn.style.display = 'none'; continueBtn.classList.remove('show'); }
+  if(resultWrap) resultWrap.classList.remove('show');
+  if(scanLine) scanLine.classList.remove('paused');
+  if(statusEl){ statusEl.textContent = '請將守城人給的 QR Code 對準框內'; statusEl.className = 'status-line'; }
 }
 
 let scanLocked = false;
-function scanLoop(){
-  if(!activeStream || scanLocked) return;
-  const video = document.getElementById('qrVideo');
-  const canvas = document.getElementById('qrCanvas');
+function showQrMatched(){
+  if(scanLocked) return;
+  scanLocked = true;
+
   const statusEl = document.getElementById('scanStatus');
+  const scanLine = document.getElementById('scanLine');
+  const resultWrap = document.getElementById('qrResultWrap');
+  const continueBtn = document.getElementById('btn-scan-continue');
 
-  if(video.readyState === video.HAVE_ENOUGH_DATA){
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = window.jsQR(imageData.data, imageData.width, imageData.height);
+  // 停止相機畫面上的掃描動畫，並在框內顯示已掃到的 QR Code 圖片
+  if(scanLine) scanLine.classList.add('paused');
+  if(resultWrap) resultWrap.classList.add('show');
 
-    if(code && code.data){
-      // 不檢查 QR Code 內容，掃到任何 QR Code 即視為成功
-      scanLocked = true;
-      statusEl.textContent = '✦ 印記已核實，城門為你而開 ✦';
-      statusEl.className = 'status-line ok';
-      setTimeout(()=>{
-        stopScanner();
-        goToScene('scene-answer');
-      }, 1100);
-      return;
-    }
+  statusEl.textContent = '✦ 印記已核實，城門為你而開 ✦';
+  statusEl.className = 'status-line ok';
+
+  if(continueBtn){
+    continueBtn.style.display = 'inline-block';
+    requestAnimationFrame(()=> continueBtn.classList.add('show'));
   }
-  requestAnimationFrame(scanLoop);
 }
 
 /* ---------------- 場景 3：答案輸入 ---------------- */
