@@ -254,6 +254,12 @@
   }
   @keyframes scanMove{ 0%,100%{ top:14%; } 50%{ top:82%; } }
 
+  .tap-to-play{
+    position:absolute; inset:0; width:100%; height:100%;
+    background: rgba(10,14,39,0.75); color: var(--star-gold);
+    border:none; font-family: var(--font-ui); font-size:14px; letter-spacing:1.5px;
+    line-height:1.8; cursor:pointer; z-index:4;
+  }
   .status-line{
     text-align:center; font-family: var(--font-ui); font-size:14px;
     color: var(--moon-silver); opacity:0.85; min-height: 22px; margin-bottom:8px;
@@ -396,6 +402,7 @@
         <video id="qrVideo" playsinline muted autoplay></video>
         <div class="scan-guide"></div>
         <div class="scan-line"></div>
+        <button type="button" id="tapToPlay" class="tap-to-play" style="display:none;">畫面卡住了嗎？<br>點這裡繼續</button>
       </div>
       <canvas id="qrCanvas" style="display:none;"></canvas>
 
@@ -574,41 +581,74 @@ function playNarrative1(){
 }
 
 /* ---------------- 場景 2：QR 掃描 ---------------- */
+async function tryPlayVideo(video, statusEl, tapBtn){
+  try{
+    await video.play();
+    tapBtn.style.display = 'none';
+    statusEl.textContent = '請將 QR Code 對準框內';
+    statusEl.className = 'status-line';
+    requestAnimationFrame(scanLoop);
+  }catch(err){
+    // iOS 常常需要「再點一次」畫面才會真的開始播放
+    tapBtn.style.display = 'block';
+    statusEl.textContent = '相機已授權，但畫面被瀏覽器擋住了，請點下方按鈕一次';
+  }
+}
+
 async function startScanner(){
   const statusEl = document.getElementById('scanStatus');
   const btn = document.getElementById('btn-start-scan');
+  const video = document.getElementById('qrVideo');
+  const tapBtn = document.getElementById('tapToPlay');
   btn.classList.remove('show');
+  tapBtn.style.display = 'none';
   statusEl.textContent = '正在啟動相機…';
   statusEl.className = 'status-line';
 
-  try{
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'environment',
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      },
-      audio: false
-    });
-    activeStream = stream;
-    const video = document.getElementById('qrVideo');
-    video.setAttribute('playsinline', 'true');
-    video.setAttribute('webkit-playsinline', 'true');
-    video.setAttribute('autoplay', 'true');
-    video.setAttribute('muted', 'true');
-    video.srcObject = stream;
-
-    await video.play().catch(() => {
-      statusEl.textContent = '相機已啟動，請再點一下畫面後繼續掃描';
-    });
-
-    statusEl.textContent = '請將 QR Code 對準框內';
-    requestAnimationFrame(scanLoop);
-  }catch(err){
-    statusEl.textContent = '無法啟用相機，請確認已允許相機權限，並使用 https 開啟本頁';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    statusEl.textContent = '這個瀏覽器不支援相機掃描，請改用手機內建的 Safari 或 Chrome 打開這個網址（不要用 LINE／IG 內建瀏覽器）';
     statusEl.className = 'status-line warn';
-    console.error(err);
+    return;
   }
+
+  // 先試後鏡頭，若裝置不支援指定條件就退回最基本的請求，避免 OverconstrainedError
+  const constraintOptions = [
+    { video: { facingMode: { ideal: 'environment' } }, audio: false },
+    { video: true, audio: false }
+  ];
+
+  let stream = null;
+  let lastErr = null;
+  for (const c of constraintOptions){
+    try{
+      stream = await navigator.mediaDevices.getUserMedia(c);
+      break;
+    }catch(err){ lastErr = err; }
+  }
+
+  if (!stream){
+    if (lastErr && (lastErr.name === 'NotAllowedError' || lastErr.name === 'PermissionDeniedError')){
+      statusEl.textContent = '相機權限被拒絕了，請到手機瀏覽器設定裡允許這個網站使用相機，再重新整理頁面';
+    } else if (lastErr && lastErr.name === 'NotFoundError'){
+      statusEl.textContent = '找不到可用的相機';
+    } else {
+      statusEl.textContent = '無法啟用相機，請確認網址是 https 開頭，並用 Safari／Chrome 開啟';
+    }
+    statusEl.className = 'status-line warn';
+    console.error(lastErr);
+    return;
+  }
+
+  activeStream = stream;
+  video.setAttribute('playsinline', 'true');
+  video.setAttribute('webkit-playsinline', 'true');
+  video.setAttribute('autoplay', 'true');
+  video.setAttribute('muted', 'true');
+  video.muted = true;
+  video.srcObject = stream;
+
+  tapBtn.onclick = () => tryPlayVideo(video, statusEl, tapBtn);
+  await tryPlayVideo(video, statusEl, tapBtn);
 }
 
 function stopScanner(){
@@ -616,6 +656,8 @@ function stopScanner(){
     activeStream.getTracks().forEach(t=>t.stop());
     activeStream = null;
   }
+  const tapBtn = document.getElementById('tapToPlay');
+  if (tapBtn) tapBtn.style.display = 'none';
 }
 
 let scanLocked = false;
