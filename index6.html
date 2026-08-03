@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>第六關 · 月之城</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+  /* ============ 設計參數（Design Tokens） ============ */
+  :root{
+    --bg-deep: #0A0E27;
+    --bg-deep2: #12163d;
+    --moon-silver: #EDEBF7;
+    --moon-shadow: #0A0E27;
+    --star-gold: #F4C95D;
+    --star-gold-soft: #B08D57;
+    --seine-blue: #4A7C9E;
+    --wine: #6B2737;
+    --wine-bright: #9C3B4C;
+    --parchment: #EAD9B4;
+    --ink: #2B2013;
+
+    --font-display: 'Noto Serif TC', serif;
+    --font-accent: 'Cinzel', serif;
+    --font-body: 'Noto Serif TC', serif;
+    --font-ui: 'Noto Sans TC', sans-serif;
+  }
+
+  *{ box-sizing: border-box; }
+  html, body{
+    margin:0; padding:0; height:100%;
+    background: radial-gradient(ellipse at 50% -10%, var(--bg-deep2) 0%, var(--bg-deep) 55%, #060815 100%);
+    color: var(--moon-silver);
+    font-family: var(--font-body);
+    overflow-x:hidden;
+  }
+  body{
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+
+  /* ============ 星空背景 ============ */
+  #starfield{
+    position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;
+  }
+  .bg-star{
+    position:absolute; border-radius:50%;
+    background: var(--moon-silver);
+    opacity:0.6;
+    animation: twinkle 3.5s ease-in-out infinite;
+  }
+  @keyframes twinkle{
+    0%,100%{ opacity:0.15; }
+    50%{ opacity:0.85; }
+  }
+
+  /* ============ 舞台 / 場景 ============ */
+  .stage{
+    position:relative; z-index:2;
+    width:100%; max-width:640px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+
+  .scene{
+    display:none;
+    animation: fadeUp 0.9s ease both;
+  }
+  .scene.scene--active{ display:block; }
+  @keyframes fadeUp{
+    from{ opacity:0; transform: translateY(18px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+
+  .card{
+    position:relative;
+    background: linear-gradient(180deg, rgba(18,22,61,0.55), rgba(10,14,39,0.75));
+    border: 1px solid rgba(237,235,247,0.16);
+    border-radius: 2px;
+    padding: 44px 34px 38px;
+    backdrop-filter: blur(6px);
+  }
+  .card::before, .card::after{
+    content:""; position:absolute; width:14px; height:14px;
+    border: 1px solid var(--star-gold-soft); opacity:0.7;
+  }
+  .card::before{ top:8px; left:8px; border-right:none; border-bottom:none; }
+  .card::after{ bottom:8px; right:8px; border-left:none; border-top:none; }
+
+  .eyebrow{
+    font-family: var(--font-accent);
+    font-size: 12px;
+    letter-spacing: 4px;
+    color: var(--star-gold);
+    text-align:center;
+    margin: 0 0 6px;
+    text-transform:uppercase;
+  }
+  .title{
+    font-family: var(--font-display);
+    font-weight:700;
+    font-size: 26px;
+    letter-spacing: 2px;
+    text-align:center;
+    margin: 0 0 30px;
+    color: var(--moon-silver);
+  }
+
+  /* ============ 月亮徽章（貫穿全場景的簽名元素） ============ */
+  .moon-wrap{
+    display:flex; justify-content:center; margin-bottom: 22px;
+  }
+  .moon-orbit{
+    position:relative; width: 168px; height:168px;
+  }
+  .moon-disc{
+    position:absolute; inset:0; border-radius:50%;
+    background: radial-gradient(circle at 35% 32%, #ffffff, var(--moon-silver) 55%, #cfd0e6 100%);
+    box-shadow: 0 0 40px 6px rgba(237,235,247,0.35), 0 0 90px 20px rgba(244,201,93,0.08);
+  }
+  .moon-shade{
+    position:absolute; inset:0; border-radius:50%;
+    background: var(--bg-deep);
+    transform: translateX(58%);
+    transition: transform 1.4s cubic-bezier(.4,0,.2,1);
+  }
+  /* 月相控制：資料屬性決定陰影位移 */
+  .moon-orbit[data-phase="new"]      .moon-shade{ transform: translateX(6%); }
+  .moon-orbit[data-phase="crescent"] .moon-shade{ transform: translateX(46%); }
+  .moon-orbit[data-phase="gibbous"]  .moon-shade{ transform: translateX(78%) scale(1.15); opacity:0.0; }
+  .moon-orbit[data-phase="full"]     .moon-shade{ transform: translateX(120%); }
+
+  .star-orbit-item{
+    position:absolute; top:50%; left:50%;
+    width:14px; height:14px; margin:-7px;
+    transform-origin: center;
+  }
+  .star-orbit-item svg{ width:100%; height:100%; display:block; }
+  .star-orbit-item .pt{ fill: var(--star-gold-soft); opacity:0.35; transition: all .6s ease; }
+  .star-orbit-item.active .pt{ fill: var(--star-gold); opacity:1; filter: drop-shadow(0 0 4px var(--star-gold)); }
+  .star-orbit-item.brand-new .pt{ fill: var(--star-gold); opacity:1; filter: drop-shadow(0 0 8px var(--star-gold)); }
+
+  .star-count{
+    text-align:center; font-family: var(--font-ui); font-size:13px;
+    letter-spacing:3px; color: var(--star-gold-soft); margin-top:2px;
+  }
+  .star-count b{ color: var(--star-gold); font-weight:600; }
+
+  /* ============ 敘事文字（逐行淡入） ============ */
+  .narrative{ min-height: 170px; margin-bottom: 8px; }
+  .narrative p{
+    font-size: 17px; line-height:1.9; text-align:center;
+    color: var(--moon-silver); margin: 0 0 10px;
+    opacity:0; transform: translateY(10px);
+    animation: lineIn 0.8s ease forwards;
+  }
+
+  @keyframes lineIn{ to{ opacity:1; transform:translateY(0); } }
+
+  /* ============ 許願瓶＋可互動星星（開場） ============ */
+  .bottle-wrap{ display:flex; flex-direction:column; align-items:center; margin-bottom: 8px; }
+  .bottle-stage{ position:relative; width:180px; height:230px; margin: 0 auto; }
+  .bottle-svg{ width:100%; height:100%; display:block; overflow:visible; }
+  .bottle-glass{ fill: rgba(74,124,158,0.14); stroke: var(--star-gold-soft); stroke-width:1.5; }
+  .bottle-cork{ fill: var(--star-gold-soft); opacity:0.9; }
+  .bottle-star{ fill: var(--star-gold); opacity:0.9; }
+  .bottle-star.new-star{
+    opacity:0; transform-box: fill-box; transform-origin: center;
+  }
+  .bottle-star.new-star.pop{ animation: starPop 0.7s cubic-bezier(.34,1.56,.64,1) forwards; }
+  @keyframes starPop{
+    0%{ opacity:0; transform: scale(0.2); }
+    55%{ opacity:1; transform: scale(1.35); }
+    100%{ opacity:1; transform: scale(0.85); filter: drop-shadow(0 0 6px var(--star-gold)); }
+  }
+
+  .catch-star{
+    position:absolute; left:50%; top:-8px; width:36px; height:36px;
+    margin-left:-18px; cursor:pointer; z-index:3;
+    filter: drop-shadow(0 0 7px var(--star-gold));
+    animation: catchTwinkle 2.1s ease-in-out infinite;
+  }
+  .catch-star svg{ width:100%; height:100%; display:block; }
+  .catch-star .pt{ fill: var(--star-gold); }
+  .catch-star:active{ transform: scale(0.9); }
+  .catch-star.falling{
+    animation: starFall 0.85s cubic-bezier(.55,0,.85,.35) forwards;
+    pointer-events:none;
+  }
+  .catch-star.caught{ display:none; }
+  @keyframes catchTwinkle{
+    0%,100%{ transform: translateY(0) scale(1); opacity:0.85; }
+    50%{ transform: translateY(-6px) scale(1.08); opacity:1; }
+  }
+  @keyframes starFall{
+    0%{ transform: translateY(0) scale(1); opacity:1; }
+    65%{ opacity:1; }
+    100%{ transform: translateY(150px) scale(0.35); opacity:0; }
+  }
+
+  .bottle-hint{
+    text-align:center; font-family: var(--font-ui); font-size:12px;
+    letter-spacing:2px; color: rgba(237,235,247,0.45); margin-top:2px;
+    transition: opacity .3s ease;
+  }
+
+  /* ============ 按鈕 ============ */
+  .btn-row{ display:flex; justify-content:center; margin-top: 26px; }
+  .btn{
+    font-family: var(--font-ui); font-size:14px; letter-spacing:2px;
+    background: transparent;
+    color: var(--star-gold);
+    border: 1px solid var(--star-gold-soft);
+    padding: 13px 30px;
+    cursor:pointer;
+    transition: all .3s ease;
+    opacity:0; pointer-events:none;
+  }
+  .btn.show{ opacity:1; pointer-events:auto; animation: fadeUp 0.7s ease; }
+  .btn:hover{ background: rgba(244,201,93,0.1); border-color: var(--star-gold); }
+  .btn:active{ transform: scale(0.98); }
+  .btn.danger{ color: var(--wine-bright); border-color: var(--wine); }
+  .btn.danger:hover{ background: rgba(156,59,76,0.12); }
+
+  /* ============ QR 掃描場景 ============ */
+  .scanner-frame{
+    position:relative; width:100%; aspect-ratio: 1/1; max-width:360px;
+    margin: 0 auto 18px; overflow:hidden; border-radius:2px;
+    border:1px solid rgba(237,235,247,0.2);
+    background:#000;
+  }
+  .scanner-frame video{ width:100%; height:100%; object-fit:cover; display:block; }
+  .scan-guide{
+    position:absolute; inset: 14%; border: 1.5px solid var(--star-gold);
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.35);
+    opacity:0.85;
+  }
+  .scan-guide::before, .scan-guide::after{
+    content:""; position:absolute; width:100%; height:2px; left:0;
+    background: linear-gradient(90deg, transparent, var(--star-gold), transparent);
+  }
+  .scan-line{
+    position:absolute; left:14%; right:14%; height:2px;
+    background: linear-gradient(90deg, transparent, var(--star-gold), transparent);
+    top:14%;
+    animation: scanMove 2.2s ease-in-out infinite;
+  }
+  @keyframes scanMove{ 0%,100%{ top:14%; } 50%{ top:82%; } }
+
+  .status-line{
+    text-align:center; font-family: var(--font-ui); font-size:14px;
+    color: var(--moon-silver); opacity:0.85; min-height: 22px; margin-bottom:8px;
+  }
+  .status-line.ok{ color: var(--star-gold); }
+  .status-line.warn{ color: var(--wine-bright); }
+
+  /* ============ 答案輸入場景 ============ */
+  .answer-form{ display:flex; flex-direction:column; align-items:center; gap:16px; margin-top: 10px; }
+  .answer-input{
+    width:100%; max-width:320px;
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid var(--star-gold-soft);
+    color: var(--moon-silver);
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 3px;
+    text-align:center;
+    padding: 10px 4px;
+    outline:none;
+  }
+  .answer-input:focus{ border-color: var(--star-gold); }
+  .hint{
+    text-align:center; font-family: var(--font-ui); font-size:13px;
+    color: var(--wine-bright); min-height:18px; opacity:0;
+  }
+  .hint.show{ opacity:0.9; animation: shake 0.4s ease; }
+  @keyframes shake{
+    0%,100%{ transform: translateX(0); }
+    25%{ transform: translateX(-6px); }
+    75%{ transform: translateX(6px); }
+  }
+
+  /* ============ 藏寶圖揭曉場景 ============ */
+  .reveal-frame{
+    position:relative; padding: 14px; background: rgba(234,217,180,0.05);
+    border: 1px solid var(--star-gold-soft);
+  }
+  .reveal-frame img{
+    width:100%; display:block; box-shadow: 0 0 60px rgba(244,201,93,0.15);
+  }
+  .reveal-caption{
+    text-align:center; font-family: var(--font-accent); font-size:13px;
+    letter-spacing:3px; color: var(--star-gold); margin-top:18px;
+  }
+
+  .fine-print{
+    text-align:center; font-family: var(--font-ui); font-size:12px;
+    color: rgba(237,235,247,0.35); margin-top: 22px; letter-spacing:1px;
+  }
+
+  @media (max-width: 420px){
+    .card{ padding: 34px 20px 30px; }
+    .title{ font-size: 21px; }
+    .narrative p{ font-size:15.5px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="starfield"></div>
+<audio id="bgm" src="bgm6.m4a" loop preload="auto" playsinline></audio>
+
+<div class="stage">
+
+  <!-- 場景 0：拾星 -->
+  <section class="scene scene--active" id="scene-pickup">
+    <div class="card">
+      <p class="eyebrow">Chapitre VI</p>
+      <h1 class="title">拾星</h1>
+
+      <div class="bottle-wrap">
+        <div class="bottle-stage" id="bottleStage">
+          <svg class="bottle-svg" viewBox="0 0 160 230" xmlns="http://www.w3.org/2000/svg">
+            <path class="bottle-glass" d="M70,18 L90,18 L90,55 C112,66 128,92 128,130 C128,178 100,212 80,212 C60,212 32,178 32,130 C32,92 48,66 70,55 Z"/>
+            <rect class="bottle-cork" x="66" y="4" width="28" height="18" rx="4"/>
+            <!-- 原本已收集的五顆星星 -->
+            <g class="bottle-star" transform="translate(58,168) scale(0.8)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+            <g class="bottle-star" transform="translate(82,182) scale(0.7)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+            <g class="bottle-star" transform="translate(96,160) scale(0.75)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+            <g class="bottle-star" transform="translate(66,192) scale(0.6)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+            <g class="bottle-star" transform="translate(90,198) scale(0.65)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+            <!-- 第六顆星星：點擊落下後才會出現 -->
+            <g class="bottle-star new-star" id="bottleStarNew" transform="translate(76,175) scale(0.85)"><path d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></g>
+          </svg>
+          <div class="catch-star" id="catchStar" onclick="catchTheStar()">
+            <svg viewBox="0 0 24 24"><path class="pt" d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></svg>
+          </div>
+        </div>
+        <p class="star-count" id="star-count-0">星星 <b>5</b> / 6</p>
+        <p class="bottle-hint" id="bottleHint">✦ 點一下那顆星星 ✦</p>
+      </div>
+
+      <div class="narrative" id="narrative-0"></div>
+
+      <div class="btn-row">
+        <button class="btn" id="btn-0" onclick="goToScene('scene-warning')">啟程前往月之城</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 場景 1：警示與啟程 -->
+  <section class="scene" id="scene-warning">
+    <div class="card">
+      <p class="eyebrow">La Cité de la Lune</p>
+      <h1 class="title">塞納河畔・月之城</h1>
+
+      <div class="moon-wrap">
+        <div class="moon-orbit" data-phase="gibbous" id="moon-1">
+          <div class="moon-disc"></div>
+          <div class="moon-shade"></div>
+          <div class="stars-orbit" data-count="6"></div>
+        </div>
+      </div>
+      <p class="star-count">星星 <b>6</b> / 6 · 已集齊</p>
+
+      <div class="narrative" id="narrative-1"></div>
+
+      <div class="btn-row">
+        <button class="btn danger" id="btn-1" onclick="goToScene('scene-scan')">掃描守城人的 QR Code</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 場景 2：QR 掃描 -->
+  <section class="scene" id="scene-scan">
+    <div class="card">
+      <p class="eyebrow">守城人之印</p>
+      <h1 class="title">出示你的星辰印記</h1>
+
+      <div class="scanner-frame" id="scannerFrame">
+        <video id="qrVideo" playsinline muted autoplay></video>
+        <div class="scan-guide"></div>
+        <div class="scan-line"></div>
+      </div>
+      <canvas id="qrCanvas" style="display:none;"></canvas>
+
+      <p class="status-line" id="scanStatus">請將守城人給的 QR Code 對準框內</p>
+
+      <div class="btn-row">
+        <button class="btn" id="btn-start-scan" onclick="startScanner()">開始掃描</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 場景 3：輸入答案 -->
+  <section class="scene" id="scene-answer">
+    <div class="card">
+      <p class="eyebrow">守城人低語</p>
+      <h1 class="title">請說出通關密語</h1>
+
+      <div class="narrative">
+        <p style="opacity:1; animation:none;">星星已為你證明身份，守城人願再考你一題。</p>
+      </div>
+
+      <form class="answer-form" onsubmit="return checkAnswer(event)">
+        <input type="text" class="answer-input" id="answerInput" placeholder="在此輸入答案" autocomplete="off">
+        <p class="hint" id="answerHint">尚未答對，再想想……</p>
+        <button type="submit" class="btn show">確認答案</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- 場景 4：藏寶圖揭曉 -->
+  <section class="scene" id="scene-reveal">
+    <div class="card">
+      <p class="eyebrow">入城許可・已核發</p>
+      <h1 class="title">藏寶圖</h1>
+
+      <div class="reveal-frame">
+        <img id="treasureImg" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MDAgNjAwIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0icGFyY2htZW50IiBjeD0iNTAlIiBjeT0iNDUlIiByPSI3NSUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjRjFFNEM0Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iNjAlIiBzdG9wLWNvbG9yPSIjRUFEOUI0Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI0Q4QzI5NyIvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxmaWx0ZXIgaWQ9InJvdWdoIj4KICAgICAgPGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuMDEyIiBudW1PY3RhdmVzPSIzIiByZXN1bHQ9Im5vaXNlIi8+CiAgICAgIDxmZUNvbG9yTWF0cml4IGluPSJub2lzZSIgdHlwZT0ibWF0cml4IiB2YWx1ZXM9IjAgMCAwIDAgMC4xNyAgMCAwIDAgMCAwLjEzICAwIDAgMCAwIDAuMDggIDAgMCAwIDAuMDUgMCIvPgogICAgPC9maWx0ZXI+CiAgPC9kZWZzPgoKICA8cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0idXJsKCNwYXJjaG1lbnQpIi8+CiAgPHJlY3Qgd2lkdGg9IjgwMCIgaGVpZ2h0PSI2MDAiIGZpbHRlcj0idXJsKCNyb3VnaCkiLz4KCiAgPCEtLSDpgormoYboo53po74gLS0+CiAgPHJlY3QgeD0iMjQiIHk9IjI0IiB3aWR0aD0iNzUyIiBoZWlnaHQ9IjU1MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMkIyMDEzIiBzdHJva2Utd2lkdGg9IjIiIG9wYWNpdHk9IjAuNTUiLz4KICA8cmVjdCB4PSIzNCIgeT0iMzQiIHdpZHRoPSI3MzIiIGhlaWdodD0iNTMyIiBmaWxsPSJub25lIiBzdHJva2U9IiMyQjIwMTMiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC4zNSIvPgogIDxwYXRoIGQ9Ik0yNCAyNCBMNTQgMjQgTDI0IDU0IFoiIGZpbGw9IiMyQjIwMTMiIG9wYWNpdHk9IjAuMyIvPgogIDxwYXRoIGQ9Ik03NzYgMjQgTDc0NiAyNCBMNzc2IDU0IFoiIGZpbGw9IiMyQjIwMTMiIG9wYWNpdHk9IjAuMyIvPgogIDxwYXRoIGQ9Ik0yNCA1NzYgTDU0IDU3NiBMMjQgNTQ2IFoiIGZpbGw9IiMyQjIwMTMiIG9wYWNpdHk9IjAuMyIvPgogIDxwYXRoIGQ9Ik03NzYgNTc2IEw3NDYgNTc2IEw3NzYgNTQ2IFoiIGZpbGw9IiMyQjIwMTMiIG9wYWNpdHk9IjAuMyIvPgoKICA8IS0tIOWhnue0jeaysyAtLT4KICA8cGF0aCBkPSJNNjAgMTgwIEMgMTgwIDIyMCwgMjIwIDEyMCwgMzQwIDE2MCBDIDQ2MCAyMDAsIDQ4MCAyODAsIDYyMCAyNjAgQyA3MDAgMjUwLCA3MzAgMzAwLCA3NjAgMzIwIgogICAgICAgIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzNFNkU4RSIgc3Ryb2tlLXdpZHRoPSI2IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuNTUiLz4KICA8cGF0aCBkPSJNNjAgMTgwIEMgMTgwIDIyMCwgMjIwIDEyMCwgMzQwIDE2MCBDIDQ2MCAyMDAsIDQ4MCAyODAsIDYyMCAyNjAgQyA3MDAgMjUwLCA3MzAgMzAwLCA3NjAgMzIwIgogICAgICAgIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzNFNkU4RSIgc3Ryb2tlLXdpZHRoPSIxLjIiIHN0cm9rZS1kYXNoYXJyYXk9IjIgNiIgb3BhY2l0eT0iMC44Ii8+CgogIDwhLS0g6Jmb57ea6Lev5b6RIC0tPgogIDxwYXRoIGQ9Ik0xNTAgNDIwIEMgMjUwIDM4MCwgMzIwIDQ2MCwgNDIwIDQwMCBDIDUwMCAzNTAsIDU2MCAzODAsIDYyMCAzMDAiCiAgICAgICAgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMkIyMDEzIiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWRhc2hhcnJheT0iMTAgOCIgb3BhY2l0eT0iMC42Ii8+CgogIDwhLS0g6LW36bue77ya5pif5pif5bCP6Ii5IC0tPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE1MCw0MjApIiBvcGFjaXR5PSIwLjgiPgogICAgPGNpcmNsZSByPSI3IiBmaWxsPSIjRjRDOTVEIiBzdHJva2U9IiMyQjIwMTMiIHN0cm9rZS13aWR0aD0iMS41Ii8+CiAgPC9nPgoKICA8IS0tIOe1gum7niBYIC0tPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDYyMCwzMDApIiBzdHJva2U9IiM3QTJFMzMiIHN0cm9rZS13aWR0aD0iNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj4KICAgIDxsaW5lIHgxPSItMTYiIHkxPSItMTYiIHgyPSIxNiIgeTI9IjE2Ii8+CiAgICA8bGluZSB4MT0iLTE2IiB5MT0iMTYiIHgyPSIxNiIgeTI9Ii0xNiIvPgogIDwvZz4KCiAgPCEtLSDnvoXnm6TnjqvnkbAgLS0+CiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNjkwLDExMCkiIG9wYWNpdHk9IjAuODUiPgogICAgPGNpcmNsZSByPSI0NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMkIyMDEzIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogICAgPGNpcmNsZSByPSIzMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMkIyMDEzIiBzdHJva2Utd2lkdGg9IjEiLz4KICAgIDxwYXRoIGQ9Ik0wLC00NiBMOCwwIEwwLDQ2IEwtOCwwIFoiIGZpbGw9IiM3QTJFMzMiLz4KICAgIDxwYXRoIGQ9Ik0tNDYsMCBMMCw4IEw0NiwwIEwwLC04IFoiIGZpbGw9IiMyQjIwMTMiLz4KICAgIDx0ZXh0IHg9IjAiIHk9Ii01NCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsIHNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjMkIyMDEzIj5OPC90ZXh0PgogIDwvZz4KCiAgPCEtLSDmqJnpoYzmloflrZcgLS0+CiAgPHRleHQgeD0iNDAwIiB5PSIxMTAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLCAnTm90byBTZXJpZiBUQycsIHNlcmlmIgogICAgICAgIGZvbnQtc2l6ZT0iMzAiIGxldHRlci1zcGFjaW5nPSI2IiBmaWxsPSIjMkIyMDEzIj5MQSBDSVTDiSBERSBMQSBMVU5FPC90ZXh0PgogIDx0ZXh0IHg9IjQwMCIgeT0iMTQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iR2VvcmdpYSwgc2VyaWYiIGZvbnQtc3R5bGU9Iml0YWxpYyIKICAgICAgICBmb250LXNpemU9IjE1IiBsZXR0ZXItc3BhY2luZz0iMiIgZmlsbD0iIzViNGEzMCI+4oCUIFggbWFycXVlIGwnZW5kcm9pdCDigJQ8L3RleHQ+CgogIDx0ZXh0IHg9IjQwMCIgeT0iNTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iJ05vdG8gU2VyaWYgVEMnLCBzZXJpZiIKICAgICAgICBmb250LXNpemU9IjE2IiBsZXR0ZXItc3BhY2luZz0iMyIgZmlsbD0iIzViNGEzMCI+77yI5q2k54K66aCQ55WZ6JeP5a+25ZyW77yM5q2j5byP5ZyW54mH5bCH5pa85LiK5YKz5b6M5pu/5o+b77yJPC90ZXh0Pgo8L3N2Zz4K" alt="藏寶圖">
+      </div>
+      <p class="reveal-caption">月光為證，城門已開</p>
+    </div>
+  </section>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
+<script>
+/* =========================================================
+   可調整設定：通關答案
+   （QR Code 不檢查內容，掃到任何 QR Code 就直接進入下一頁）
+   ========================================================= */
+const CORRECT_ANSWER = "NtHu_cOuple";   // 下一頁要輸入的正確答案（比對時不分大小寫）
+
+/* ---------------- 背景音樂 ---------------- */
+(function initBGM(){
+  const audio = document.getElementById('bgm');
+  if(!audio) return;
+  const tryPlay = ()=> audio.play().catch(()=>{});
+  tryPlay();
+  // iOS Safari 通常需要一次使用者互動才能播放音訊，這裡在第一次點擊/觸控時補一次
+  const unlock = ()=>{
+    tryPlay();
+    document.removeEventListener('touchstart', unlock);
+    document.removeEventListener('click', unlock);
+  };
+  document.addEventListener('touchstart', unlock, {once:true});
+  document.addEventListener('click', unlock, {once:true});
+})();
+
+/* ---------------- 星空背景 ---------------- */
+(function initStarfield(){
+  const field = document.getElementById('starfield');
+  const count = 90;
+  for(let i=0;i<count;i++){
+    const s = document.createElement('div');
+    s.className = 'bg-star';
+    const size = Math.random()*2 + 1;
+    s.style.width = size+'px';
+    s.style.height = size+'px';
+    s.style.left = Math.random()*100+'vw';
+    s.style.top = Math.random()*100+'vh';
+    s.style.animationDelay = (Math.random()*3.5)+'s';
+    s.style.animationDuration = (2.5+Math.random()*3)+'s';
+    field.appendChild(s);
+  }
+})();
+
+/* ---------------- 星軌繪製（月亮周圍 6 顆星） ---------------- */
+function buildOrbit(container, activeCount, opts){
+  opts = opts || {};
+  const radius = 92;
+  container.innerHTML = '';
+  for(let i=0;i<6;i++){
+    const angle = (Math.PI*2/6)*i - Math.PI/2;
+    const x = 84 + radius*0.42*Math.cos(angle);
+    const y = 84 + radius*0.42*Math.sin(angle);
+    const item = document.createElement('div');
+    item.className = 'star-orbit-item' + (i < activeCount ? ' active' : '');
+    if(opts.newIndex === i) item.classList.add('brand-new');
+    item.style.left = x+'px';
+    item.style.top = y+'px';
+    item.innerHTML = '<svg viewBox="0 0 24 24"><path class="pt" d="M12 0 L14.6 8.4 L23.5 8.4 L16.3 13.6 L18.9 22 L12 16.8 L5.1 22 L7.7 13.6 L0.5 8.4 L9.4 8.4 Z"/></svg>';
+    container.appendChild(item);
+  }
+}
+buildOrbit(document.querySelector('#moon-1 .stars-orbit'), 6);
+
+/* ---------------- 場景切換 ---------------- */
+let activeStream = null;
+
+function goToScene(id){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('scene--active'));
+  document.getElementById(id).classList.add('scene--active');
+  if(id !== 'scene-scan') stopScanner();
+  window.scrollTo({top:0, behavior:'smooth'});
+
+  if(id === 'scene-warning') playNarrative1();
+}
+
+/* ---------------- 逐行敘事文字 ---------------- */
+function typeLines(containerId, lines, delayBetween, onDone){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  lines.forEach((line, idx)=>{
+    const p = document.createElement('p');
+    p.textContent = line;
+    p.style.animationDelay = (idx*delayBetween)+'s';
+    el.appendChild(p);
+  });
+  if(onDone){
+    setTimeout(onDone, lines.length*delayBetween*1000 + 500);
+  }
+}
+
+/* ---------------- 場景 0：拾星（可互動） ---------------- */
+function playIntro(){
+  typeLines('narrative-0', [
+    '古老的王遺留了一顆星星在人間',
+    '恰好被你給撿到了'
+  ], 1.1);
+}
+
+let starCaught = false;
+function catchTheStar(){
+  if(starCaught) return;
+  starCaught = true;
+
+  const star = document.getElementById('catchStar');
+  const hint = document.getElementById('bottleHint');
+  star.classList.add('falling');
+  hint.style.opacity = '0';
+
+  setTimeout(()=>{
+    star.classList.add('caught');
+    document.getElementById('bottleStarNew').classList.add('pop');
+    document.getElementById('star-count-0').innerHTML = '星星 <b>6</b> / 6';
+    document.getElementById('btn-0').classList.add('show');
+  }, 800);
+}
+
+/* ---------------- 場景 1：警示敘事 ---------------- */
+let narrative1Played = false;
+function playNarrative1(){
+  if(narrative1Played) return;
+  narrative1Played = true;
+  typeLines('narrative-1', [
+    '現在，拿著你集齊的六顆星星',
+    '前往塞納河畔的月之城',
+    '要記得小心守城人',
+    '若您在其面前露出笑容',
+    '您將失去入城資格',
+    '現在，去吧，勇士',
+    '吾相信這些星星足以向守城人證明你的身份'
+  ], 1.0, ()=>{
+    document.getElementById('btn-1').classList.add('show');
+  });
+}
+
+/* ---------------- 場景 2：QR 掃描 ---------------- */
+async function startScanner(){
+  const statusEl = document.getElementById('scanStatus');
+  document.getElementById('btn-start-scan').classList.remove('show');
+  statusEl.textContent = '正在啟動相機…';
+  statusEl.className = 'status-line';
+
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false
+    });
+    activeStream = stream;
+    const video = document.getElementById('qrVideo');
+    video.srcObject = stream;
+    await video.play();
+    statusEl.textContent = '請將 QR Code 對準框內';
+    requestAnimationFrame(scanLoop);
+  }catch(err){
+    statusEl.textContent = '無法啟用相機，請確認已允許相機權限，並使用 https 開啟本頁';
+    statusEl.className = 'status-line warn';
+    console.error(err);
+  }
+}
+
+function stopScanner(){
+  if(activeStream){
+    activeStream.getTracks().forEach(t=>t.stop());
+    activeStream = null;
+  }
+}
+
+let scanLocked = false;
+function scanLoop(){
+  if(!activeStream || scanLocked) return;
+  const video = document.getElementById('qrVideo');
+  const canvas = document.getElementById('qrCanvas');
+  const statusEl = document.getElementById('scanStatus');
+
+  if(video.readyState === video.HAVE_ENOUGH_DATA){
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = window.jsQR(imageData.data, imageData.width, imageData.height);
+
+    if(code && code.data){
+      // 不檢查 QR Code 內容，掃到任何 QR Code 即視為成功
+      scanLocked = true;
+      statusEl.textContent = '✦ 印記已核實，城門為你而開 ✦';
+      statusEl.className = 'status-line ok';
+      setTimeout(()=>{
+        stopScanner();
+        goToScene('scene-answer');
+      }, 1100);
+      return;
+    }
+  }
+  requestAnimationFrame(scanLoop);
+}
+
+/* ---------------- 場景 3：答案輸入 ---------------- */
+function checkAnswer(e){
+  e.preventDefault();
+  const input = document.getElementById('answerInput');
+  const hint = document.getElementById('answerHint');
+  const val = input.value.trim();
+
+  if(val.toLowerCase() === CORRECT_ANSWER.toLowerCase()){
+    goToScene('scene-reveal');
+  }else{
+    hint.classList.remove('show');
+    void hint.offsetWidth; // 觸發重播 shake 動畫
+    hint.classList.add('show');
+  }
+  return false;
+}
+
+/* ---------------- 啟動 ---------------- */
+playIntro();
+</script>
+</body>
+</html>
