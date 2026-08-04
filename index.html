@@ -457,7 +457,7 @@
       <h1 class="title">請說出通關密語</h1>
 
       <div class="narrative">
-        <p style="opacity:1; animation:none;">星星已為你證明身份，但想入城仍需要您的智慧。</p>
+        <p style="opacity:1; animation:none;">星星已為你證明身份，但想入城仍需您的智慧。</p>
       </div>
 
       <form class="answer-form" onsubmit="return checkAnswer(event)">
@@ -739,7 +739,7 @@ function showQrMatched(){
   if(scanLine) scanLine.classList.add('paused');
   if(resultWrap) resultWrap.classList.add('show');
 
-  statusEl.textContent = '✦ 印記已核實，城門為你而開 ✦';
+  statusEl.textContent = '✦ 已成功驗證守城人印記 ✦';
   statusEl.className = 'status-line ok';
 
   if(continueBtn){
